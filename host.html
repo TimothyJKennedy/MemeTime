@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meme Time! - Host</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        #slideshow img { max-width: 80%; margin: 20px; }
+    </style>
+</head>
+<body>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        socket.on('uploadUpdate', (players) => {
+            const playerList = document.getElementById('player-list');
+            playerList.innerHTML = '<h2>Players:</h2>' + players.map(p => 
+                `<p>${p.animalName} - ${p.memePath ? 'Uploaded' : 'Pending'}</p>`
+            ).join('');
+        });
+
+        document.getElementById('start-slideshow').addEventListener('click', () => {
+            socket.emit('startSlideshow');
+        });
+
+        socket.on('slideshow', (memes) => {
+            let index = 0;
+            const slideshow = document.getElementById('slideshow');
+            function nextMeme() {
+                if (index >= memes.length) {
+                    socket.emit('startVoting');
+                    slideshow.innerHTML = '<h2>Voting Time!</h2>';
+                    return;
+                }
+                slideshow.innerHTML = `<img src="/uploads/${path.basename(memes[index].memePath)}"><p>${memes[index].animalName}</p>`;
+                index++;
+                setTimeout(nextMeme, 5000);
+            }
+            nextMeme();
+        });
+
+        socket.on('results', (ranked) => {
+            const leaderboard = document.getElementById('leaderboard');
+            leaderboard.innerHTML = '<h2>Leaderboard:</h2>' + ranked.map(([name, score]) => 
+                `<p>${name}: ${score} votes</p>`
+            ).join('');
+        });
+    </script>
+</body>
+</html>

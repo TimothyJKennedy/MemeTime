@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meme Time! - Player</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+    </style>
+</head>
+<body>
+    <h1>Meme Time!</h1>
+    <p>Your name: <span id="animal-name"></span></p>
+    <input type="file" id="meme-upload" accept="image/*">
+    <button id="upload-btn">Upload Meme</button>
+    <div id="voting"></div>
+    <button id="submit-vote" style="display: none;">Submit Vote</button>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        socket.on('animalName', (name) => {
+            document.getElementById('animal-name').textContent = name;
+        });
+        document.getElementById('upload-btn').addEventListener('click', () => {
+            const fileInput = document.getElementById('meme-upload');
+            const file = fileInput.files[0];
+            if (file) {
+                const formData = new FormData();
+                formData.append('meme', file);
+                formData.append('socketId', socket.id);
+                fetch('/upload', { method: 'POST', body: formData })
+                    .then(() => {
+                        fileInput.disabled = true;
+                        document.getElementById('upload-btn').disabled = true;
+                    })
+                    .catch(err => console.error('Upload failed:', err));
+            }
+        });
+        socket.on('voting', (memes) => {
+            const votingDiv = document.getElementById('voting');
+            votingDiv.innerHTML = '<h2>Vote for the Best Meme:</h2>' + memes.map(m => 
+                `<label><input type="radio" name="vote" value="${m.animalName}"> ${m.animalName}</label><br>`
+            ).join('');
+            document.getElementById('submit-vote').style.display = 'block';
+        });
+        document.getElementById('submit-vote').addEventListener('click', () => {
+            const vote = document.querySelector('input[name="vote"]:checked');
+            if (vote) {
+                socket.emit('submitVote', vote.value);
+                document.getElementById('voting').innerHTML = '<p>Vote submitted!</p>';
+                document.getElementById('submit-vote').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
